@@ -15,7 +15,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const intasendApiKey = Deno.env.get("INTASEND_API_KEY");
-    const intasendPublishableKey = Deno.env.get("INTASEND_PUBLISHABLE_KEY");
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Auth check
@@ -35,7 +34,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { amount, phone_number } = body;
+    const { amount, phone_number, purpose = "credits", sender_id, network, business_name } = body;
 
     if (!amount || amount < 10) {
       return new Response(JSON.stringify({ error: "Minimum amount is KES 10" }), {
@@ -48,12 +47,14 @@ serve(async (req) => {
       });
     }
 
-    // Create payment record
+    // Create payment record with unique api_ref
+    const apiRef = `${purpose}_${user.id}_${Date.now()}`;
     const { data: payment, error: paymentError } = await supabase.from("payments").insert({
       user_id: user.id,
       amount,
       phone_number,
       status: "pending",
+      checkout_request_id: apiRef,
     }).select().single();
 
     if (paymentError) {
@@ -64,34 +65,45 @@ serve(async (req) => {
 
     // IntaSend STK Push
     if (intasendApiKey) {
-      const intasendRes = await fetch("https://payment.intasend.com/api/v1/payment/mpesa-stk-push/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${intasendApiKey}`,
-        },
-        body: JSON.stringify({
-          amount: amount,
-          phone_number: phone_number,
-          api_ref: payment.id,
-          narrative: "ABAN SMS Credits",
-        }),
-      });
+      try {
+        const intasendRes = await fetch("https://payment.intasend.com/api/v1/payment/mpesa-stk-push/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${intasendApiKey}`,
+          },
+          body: JSON.stringify({
+            amount,
+            phone_number,
+            api_ref: apiRef,
+            narrative: purpose === "sender_id"
+              ? `Sender ID: ${sender_id} (${network})`
+              : "ABANCOOL SMS Credits",
+          }),
+        });
 
-      const intasendData = await intasendRes.json();
+        const intasendData = await intasendRes.json();
 
-      if (intasendData.invoice?.invoice_id) {
-        await supabase.from("payments")
-          .update({ checkout_request_id: intasendData.invoice.invoice_id })
-          .eq("id", payment.id);
+        if (intasendData.invoice?.invoice_id) {
+          await supabase.from("payments")
+            .update({ checkout_request_id: intasendData.invoice.invoice_id })
+            .eq("id", payment.id);
+        }
+      } catch (intasendErr) {
+        console.error("IntaSend STK error:", intasendErr);
       }
     }
 
     // Log
     await supabase.from("system_logs").insert({
       user_id: user.id,
-      action: "payment_initiated",
-      details: { payment_id: payment.id, amount, phone_number, provider: "intasend" },
+      action: purpose === "sender_id" ? "sender_id_payment_initiated" : "credit_purchase_initiated",
+      details: {
+        payment_id: payment.id,
+        amount,
+        phone_number,
+        ...(purpose === "sender_id" && { sender_id, network, business_name }),
+      },
     });
 
     return new Response(JSON.stringify({
