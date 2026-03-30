@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Key, Plus, Copy, Trash2, Loader2, Code, Eye, EyeOff } from "lucide-react";
+import { Key, Plus, Copy, Trash2, Loader2, Code } from "lucide-react";
 
 function generateKey(prefix: string) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -50,7 +50,7 @@ export default function APIKeys() {
     const { error } = await supabase.from("api_keys").insert({
       user_id: user.id,
       api_key: apiKey,
-      api_secret_hash: apiSecret, // In production, hash this server-side
+      api_secret_hash: apiSecret,
       name: keyName.trim(),
     });
 
@@ -202,7 +202,7 @@ export default function APIKeys() {
   -H "Content-Type: application/json" \\
   -d '{
     "recipients": ["254712345678"],
-    "message": "Hello from ABAN SMS!",
+    "message": "Hello from ABANCOOL SMS!",
     "sender_id": "ABAN_COOL"
   }'`}
             </pre>

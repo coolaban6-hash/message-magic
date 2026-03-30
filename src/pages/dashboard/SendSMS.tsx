@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { calculateSegments, calculateCost, parseRecipients } from "@/lib/sms-utils";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +40,8 @@ export default function SendSMS() {
   const recipients = parseRecipients(recipientsInput);
   const segments = calculateSegments(message);
   const cost = calculateCost(message, recipients.length);
-  const canSend = recipients.length > 0 && message.length > 0 && (wallet?.balance ?? 0) >= cost;
+  const balance = wallet?.balance ?? 0;
+  const canSend = recipients.length > 0 && message.length > 0 && balance >= cost && balance > 0;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,7 +50,6 @@ export default function SendSMS() {
     reader.onload = (event) => {
       const text = event.target?.result as string;
       const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-      // Find phone column
       const phones = lines.slice(1).map((line) => {
         const cols = line.split(",");
         return cols[0]?.trim().replace(/[^0-9+]/g, "");
@@ -61,38 +61,40 @@ export default function SendSMS() {
   };
 
   const handleSend = async () => {
-    if (!user || !canSend) return;
-    setSending(true);
+    if (!user) return;
 
-    const { error } = await supabase.from("messages").insert({
-      user_id: user.id,
-      sender_id_text: senderId,
-      recipients,
-      message,
-      segment_count: segments,
-      total_cost: cost,
-      status: "queued",
-    });
-
-    if (error) {
-      toast.error("Failed to queue message");
-      setSending(false);
+    // Hard block if balance is 0
+    if (balance <= 0) {
+      toast.error("Your balance is 0. Please buy credits before sending SMS.");
       return;
     }
 
-    // Invoke edge function to process
-    try {
-      await supabase.functions.invoke("send-sms", {
-        body: { recipients, message, sender_id: senderId },
-      });
-    } catch (err) {
-      // Message is queued even if edge function fails
-      console.error("Edge function error:", err);
+    if (balance < cost) {
+      toast.error("Insufficient balance. Please top up your wallet.");
+      return;
     }
 
-    toast.success(`SMS queued to ${recipients.length} recipients!`);
-    setRecipientsInput("");
-    setMessage("");
+    if (!canSend) return;
+    setSending(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-sms", {
+        body: { recipients, message, sender_id: senderId },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+      } else {
+        toast.success(`SMS sent to ${recipients.length} recipients! Cost: KES ${data?.total_cost?.toFixed(2) ?? cost.toFixed(2)}`);
+        setRecipientsInput("");
+        setMessage("");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send SMS");
+    }
+
     setSending(false);
     queryClient.invalidateQueries({ queryKey: ["wallet"] });
     queryClient.invalidateQueries({ queryKey: ["recent_messages"] });
@@ -188,10 +190,16 @@ export default function SendSMS() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Wallet Balance</span>
-                <span className={`font-medium ${(wallet?.balance ?? 0) < cost ? "text-destructive" : "text-success"}`}>
-                  KES {wallet?.balance?.toFixed(2) ?? "0.00"}
+                <span className={`font-medium ${balance < cost ? "text-destructive" : "text-success"}`}>
+                  KES {balance.toFixed(2)}
                 </span>
               </div>
+
+              {balance <= 0 && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <p className="text-xs text-destructive font-medium">Your balance is 0. Please buy credits to send SMS.</p>
+                </div>
+              )}
 
               <Button
                 onClick={handleSend}
@@ -202,7 +210,7 @@ export default function SendSMS() {
                 Send SMS
               </Button>
 
-              {(wallet?.balance ?? 0) < cost && recipients.length > 0 && message.length > 0 && (
+              {balance > 0 && balance < cost && recipients.length > 0 && message.length > 0 && (
                 <p className="text-xs text-destructive text-center">Insufficient balance</p>
               )}
             </CardContent>

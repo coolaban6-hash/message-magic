@@ -27,7 +27,7 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     
     // Try JWT auth first
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user } } = await supabase.auth.getUser(token);
     
     let userId: string;
     
@@ -77,6 +77,23 @@ serve(async (req) => {
       });
     }
 
+    // Validate sender ID - must be ABAN_COOL or an active sender ID owned by user
+    if (sender_id !== "ABAN_COOL") {
+      const { data: validSender } = await supabase
+        .from("sender_ids")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("sender_id", sender_id)
+        .eq("status", "active")
+        .single();
+      
+      if (!validSender) {
+        return new Response(JSON.stringify({ error: "Invalid or inactive sender ID. Use ABAN_COOL or an approved sender ID." }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Calculate cost
     const isGsm = /^[\x20-\x7E\n\r]*$/.test(message);
     const len = message.length;
@@ -84,15 +101,20 @@ serve(async (req) => {
     const costPerSegment = 0.50;
     const totalCost = segments * recipients.length * costPerSegment;
 
-    // Check wallet
+    // Check wallet - HARD BLOCK if balance is 0
     const { data: wallet } = await supabase.from("wallets").select("*").eq("user_id", userId).single();
-    if (!wallet || wallet.balance < totalCost) {
-      return new Response(JSON.stringify({ error: "Insufficient balance", required: totalCost, available: wallet?.balance ?? 0 }), {
+    if (!wallet || wallet.balance <= 0) {
+      return new Response(JSON.stringify({ error: "Your balance is 0. Please buy credits before sending SMS.", required: totalCost, available: wallet?.balance ?? 0 }), {
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (wallet.balance < totalCost) {
+      return new Response(JSON.stringify({ error: "Insufficient balance", required: totalCost, available: wallet.balance }), {
         status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Deduct credits
+    // Deduct credits FIRST (before sending)
     const newBalance = wallet.balance - totalCost;
     await supabase.from("wallets").update({ balance: newBalance }).eq("id", wallet.id);
 
@@ -104,7 +126,7 @@ serve(async (req) => {
       amount: totalCost,
       balance_before: wallet.balance,
       balance_after: newBalance,
-      description: `SMS to ${recipients.length} recipients`,
+      description: `SMS to ${recipients.length} recipients (${segments} segments)`,
     });
 
     // Create message record
@@ -117,17 +139,20 @@ serve(async (req) => {
       total_cost: totalCost,
       status: "sent",
       sent_count: recipients.length,
-      api_request: !user, // true if API key was used
+      api_request: !user,
     }).select().single();
 
-    // TODO: Integrate with Talksasa API here
-    // For now, mark as sent. In production, call Talksasa API and handle delivery reports.
+    // TODO: Integrate with SMS provider here
+    // On failure, refund credits automatically:
+    // await supabase.from("wallets").update({ balance: wallet.balance }).eq("id", wallet.id);
+    // await supabase.from("messages").update({ status: "failed" }).eq("id", msgRecord?.id);
+    // await supabase.from("wallet_transactions").insert({ ... type: "refund" ... });
 
     // Log
     await supabase.from("system_logs").insert({
       user_id: userId,
       action: "sms_sent",
-      details: { message_id: msgRecord?.id, recipients: recipients.length, cost: totalCost },
+      details: { message_id: msgRecord?.id, recipients: recipients.length, cost: totalCost, sender_id },
     });
 
     return new Response(JSON.stringify({

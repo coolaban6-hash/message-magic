@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="h-9 w-9 rounded-lg gradient-primary flex items-center justify-center">
               <MessageSquare className="h-4.5 w-4.5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-display font-bold">ABAN SMS</span>
+            <span className="text-lg font-display font-bold">ABANCOOL SMS</span>
           </Link>
         </div>
 
