@@ -14,6 +14,8 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const intasendApiKey = Deno.env.get("INTASEND_API_KEY");
+    const intasendPublishableKey = Deno.env.get("INTASEND_PUBLISHABLE_KEY");
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Auth check
@@ -60,23 +62,42 @@ serve(async (req) => {
       });
     }
 
-    // TODO: Integrate with M-Pesa Daraja API
-    // 1. Get OAuth token from Safaricom
-    // 2. Initiate STK Push
-    // 3. Store checkout_request_id
-    // For now, simulate STK push initiation
-    
+    // IntaSend STK Push
+    if (intasendApiKey) {
+      const intasendRes = await fetch("https://payment.intasend.com/api/v1/payment/mpesa-stk-push/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${intasendApiKey}`,
+        },
+        body: JSON.stringify({
+          amount: amount,
+          phone_number: phone_number,
+          api_ref: payment.id,
+          narrative: "ABAN SMS Credits",
+        }),
+      });
+
+      const intasendData = await intasendRes.json();
+
+      if (intasendData.invoice?.invoice_id) {
+        await supabase.from("payments")
+          .update({ checkout_request_id: intasendData.invoice.invoice_id })
+          .eq("id", payment.id);
+      }
+    }
+
     // Log
     await supabase.from("system_logs").insert({
       user_id: user.id,
       action: "payment_initiated",
-      details: { payment_id: payment.id, amount, phone_number },
+      details: { payment_id: payment.id, amount, phone_number, provider: "intasend" },
     });
 
     return new Response(JSON.stringify({
       success: true,
       payment_id: payment.id,
-      message: "STK push initiated. Complete payment on your phone.",
+      message: "STK push sent! Complete payment on your phone.",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
