@@ -33,7 +33,7 @@ export default function Login() {
             <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center">
               <MessageSquare className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-display font-bold">ABAN SMS</h1>
+            <h1 className="text-2xl font-display font-bold">ABANCOOL SMS</h1>
           </div>
           <p className="text-muted-foreground">Bulk SMS Platform</p>
         </div>

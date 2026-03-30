@@ -25,7 +25,7 @@ export default function Register() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: "https://bulksms.abancool.com/login",
       },
     });
     setLoading(false);
@@ -42,14 +42,14 @@ export default function Register() {
             <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center">
               <MessageSquare className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-display font-bold">ABAN SMS</h1>
+            <h1 className="text-2xl font-display font-bold">ABANCOOL SMS</h1>
           </div>
           <p className="text-muted-foreground">Create your account</p>
         </div>
         <Card className="glass">
           <CardHeader>
             <CardTitle className="font-display">Sign Up</CardTitle>
-            <CardDescription>Start sending bulk SMS in minutes</CardDescription>
+            <CardDescription>Start sending bulk SMS in minutes. Get 10 free SMS credits!</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
