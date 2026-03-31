@@ -57,12 +57,6 @@ export default function AdminUsers() {
     setAdjusting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("admin-credit-sync", {
-        body: { user_id: adjustDialog.userId, amount: num, type: adjustType, reason: adjustReason },
-        headers: {},
-      });
-
-      // Construct URL manually for query param
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-credit-sync?action=adjust`;
       const session = (await supabase.auth.getSession()).data.session;
       const res = await fetch(url, {
