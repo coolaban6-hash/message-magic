@@ -14,6 +14,10 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const talksasaToken = Deno.env.get("TALKSASA_API_TOKEN")!;
+    const talksasaBaseUrl = Deno.env.get("TALKSASA_BASE_URL") || "https://api.talksasa.com";
+    const talksasaMaxRecipients = parseInt(Deno.env.get("TALKSASA_MAX_RECIPIENTS") || "500");
+    const talksasaDefaultSenderId = Deno.env.get("TALKSASA_DEFAULT_SENDER_ID") || "ABAN_COOL";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Check auth
@@ -25,31 +29,27 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    
-    // Try JWT auth first
     const { data: { user } } = await supabase.auth.getUser(token);
-    
+
     let userId: string;
-    
+
     if (user) {
       userId = user.id;
     } else {
-      // Try API key auth
+      // API key auth
       const { data: apiKey } = await supabase
         .from("api_keys")
         .select("*")
         .eq("api_key", token)
         .eq("is_active", true)
         .single();
-      
+
       if (!apiKey) {
         return new Response(JSON.stringify({ error: "Invalid credentials" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       userId = apiKey.user_id;
-      
-      // Update last used
       await supabase.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", apiKey.id);
     }
 
@@ -77,7 +77,8 @@ serve(async (req) => {
       });
     }
 
-    // Validate sender ID - must be ABAN_COOL or an active sender ID owned by user
+    // Validate sender ID
+    let actualSenderId = sender_id;
     if (sender_id !== "ABAN_COOL") {
       const { data: validSender } = await supabase
         .from("sender_ids")
@@ -86,12 +87,14 @@ serve(async (req) => {
         .eq("sender_id", sender_id)
         .eq("status", "active")
         .single();
-      
+
       if (!validSender) {
         return new Response(JSON.stringify({ error: "Invalid or inactive sender ID. Use ABAN_COOL or an approved sender ID." }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+    } else {
+      actualSenderId = talksasaDefaultSenderId;
     }
 
     // Calculate cost
@@ -126,7 +129,7 @@ serve(async (req) => {
       amount: totalCost,
       balance_before: wallet.balance,
       balance_after: newBalance,
-      description: `SMS to ${recipients.length} recipients (${segments} segments)`,
+      description: `SMS to ${recipients.length} recipients (${segments} seg)`,
     });
 
     // Create message record
@@ -137,31 +140,105 @@ serve(async (req) => {
       message,
       segment_count: segments,
       total_cost: totalCost,
-      status: "sent",
-      sent_count: recipients.length,
+      status: "queued",
+      sent_count: 0,
       api_request: !user,
     }).select().single();
 
-    // TODO: Integrate with SMS provider here
-    // On failure, refund credits automatically:
-    // await supabase.from("wallets").update({ balance: wallet.balance }).eq("id", wallet.id);
-    // await supabase.from("messages").update({ status: "failed" }).eq("id", msgRecord?.id);
-    // await supabase.from("wallet_transactions").insert({ ... type: "refund" ... });
+    // Send via Talksasa in batches
+    let totalSent = 0;
+    let totalFailed = 0;
+    const batchSize = talksasaMaxRecipients;
+    const batches = [];
+
+    for (let i = 0; i < recipients.length; i += batchSize) {
+      batches.push(recipients.slice(i, i + batchSize));
+    }
+
+    for (const batch of batches) {
+      try {
+        const talksasaRes = await fetch(`${talksasaBaseUrl}/v1/sms/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${talksasaToken}`,
+          },
+          body: JSON.stringify({
+            sender_id: actualSenderId,
+            message,
+            recipients: batch,
+          }),
+        });
+
+        const talksasaData = await talksasaRes.json();
+
+        if (talksasaRes.ok && (talksasaData.status === "success" || talksasaData.success)) {
+          totalSent += batch.length;
+        } else {
+          console.error("Talksasa batch error:", talksasaData);
+          totalFailed += batch.length;
+        }
+      } catch (batchErr) {
+        console.error("Talksasa batch exception:", batchErr);
+        totalFailed += batch.length;
+      }
+    }
+
+    // Update message record with results
+    const finalStatus = totalFailed === recipients.length ? "failed" : totalSent > 0 ? "sent" : "failed";
+    await supabase.from("messages").update({
+      status: finalStatus,
+      sent_count: totalSent,
+      failed_count: totalFailed,
+    }).eq("id", msgRecord?.id);
+
+    // If ALL failed, refund credits
+    if (totalFailed === recipients.length) {
+      await supabase.from("wallets").update({ balance: wallet.balance }).eq("id", wallet.id);
+      await supabase.from("wallet_transactions").insert({
+        user_id: userId,
+        wallet_id: wallet.id,
+        type: "refund",
+        amount: totalCost,
+        balance_before: newBalance,
+        balance_after: wallet.balance,
+        description: `Refund: SMS delivery failed`,
+      });
+
+      // Update message status
+      await supabase.from("messages").update({ status: "refunded" }).eq("id", msgRecord?.id);
+    } else if (totalFailed > 0) {
+      // Partial refund for failed messages
+      const refundAmount = segments * totalFailed * costPerSegment;
+      const refundedBalance = newBalance + refundAmount;
+      await supabase.from("wallets").update({ balance: refundedBalance }).eq("id", wallet.id);
+      await supabase.from("wallet_transactions").insert({
+        user_id: userId,
+        wallet_id: wallet.id,
+        type: "refund",
+        amount: refundAmount,
+        balance_before: newBalance,
+        balance_after: refundedBalance,
+        description: `Partial refund: ${totalFailed} SMS failed`,
+      });
+    }
 
     // Log
     await supabase.from("system_logs").insert({
       user_id: userId,
       action: "sms_sent",
-      details: { message_id: msgRecord?.id, recipients: recipients.length, cost: totalCost, sender_id },
+      details: { message_id: msgRecord?.id, recipients: recipients.length, sent: totalSent, failed: totalFailed, cost: totalCost, sender_id },
     });
 
     return new Response(JSON.stringify({
       success: true,
       message_id: msgRecord?.id,
       recipients: recipients.length,
+      sent: totalSent,
+      failed: totalFailed,
       segments,
       total_cost: totalCost,
-      balance_after: newBalance,
+      balance_after: totalFailed > 0 ? newBalance + (segments * totalFailed * costPerSegment) : newBalance,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

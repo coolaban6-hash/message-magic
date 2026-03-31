@@ -14,7 +14,8 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const intasendApiKey = Deno.env.get("INTASEND_API_KEY");
+    const intasendSecretKey = Deno.env.get("INTASEND_SECRET_KEY")!;
+    const intasendBaseUrl = Deno.env.get("INTASEND_BASE_URL") || "https://payment.intasend.com";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Auth check
@@ -63,35 +64,46 @@ serve(async (req) => {
       });
     }
 
-    // IntaSend STK Push
-    if (intasendApiKey) {
-      try {
-        const intasendRes = await fetch("https://payment.intasend.com/api/v1/payment/mpesa-stk-push/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${intasendApiKey}`,
-          },
-          body: JSON.stringify({
-            amount,
-            phone_number,
-            api_ref: apiRef,
-            narrative: purpose === "sender_id"
-              ? `Sender ID: ${sender_id} (${network})`
-              : "ABANCOOL SMS Credits",
-          }),
-        });
+    // IntaSend STK Push - REAL PRODUCTION
+    try {
+      const intasendRes = await fetch(`${intasendBaseUrl}/api/v1/payment/mpesa-stk-push/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${intasendSecretKey}`,
+        },
+        body: JSON.stringify({
+          amount: Number(amount),
+          phone_number,
+          api_ref: apiRef,
+          narrative: purpose === "sender_id"
+            ? `ABANCOOL Sender ID: ${sender_id} (${network})`
+            : "ABANCOOL SMS Credits",
+        }),
+      });
 
-        const intasendData = await intasendRes.json();
+      const intasendData = await intasendRes.json();
+      console.log("IntaSend STK response:", JSON.stringify(intasendData));
 
-        if (intasendData.invoice?.invoice_id) {
-          await supabase.from("payments")
-            .update({ checkout_request_id: intasendData.invoice.invoice_id })
-            .eq("id", payment.id);
-        }
-      } catch (intasendErr) {
-        console.error("IntaSend STK error:", intasendErr);
+      if (intasendData.invoice?.invoice_id) {
+        await supabase.from("payments")
+          .update({ checkout_request_id: intasendData.invoice.invoice_id })
+          .eq("id", payment.id);
       }
+
+      if (!intasendRes.ok) {
+        console.error("IntaSend STK failed:", intasendData);
+        await supabase.from("payments").update({ status: "failed" }).eq("id", payment.id);
+        return new Response(JSON.stringify({ error: "STK push failed. Please try again." }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch (intasendErr) {
+      console.error("IntaSend STK exception:", intasendErr);
+      await supabase.from("payments").update({ status: "failed" }).eq("id", payment.id);
+      return new Response(JSON.stringify({ error: "Payment service unavailable. Please try again." }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Log
