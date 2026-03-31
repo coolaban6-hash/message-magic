@@ -44,20 +44,55 @@ export default function AdminSenderIDs() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-2xl font-display font-bold">Sender ID Management</h1>
-        <p className="text-muted-foreground">Approve or reject sender ID requests</p>
+        <h1 className="text-xl md:text-2xl font-display font-bold">Sender ID Management</h1>
+        <p className="text-sm text-muted-foreground">Approve or reject sender ID requests</p>
       </div>
 
-      <Card className="glass">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        ) : senderIds && senderIds.length > 0 ? (
+          senderIds.map((sid) => (
+            <Card key={sid.id} className="glass">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-sm font-bold">{sid.sender_id}</span>
+                  <Badge variant={statusColor[sid.status]} className="capitalize">{sid.status}</Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                  <span>KES {sid.cost.toFixed(2)}</span>
+                  <span>{format(new Date(sid.created_at), "MMM d, yyyy")}</span>
+                </div>
+                {sid.status === "pending" && (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => updateStatus(sid.id, "active")} className="flex-1 text-success border-success/20">
+                      <Check className="h-3 w-3 mr-1" /> Approve
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => updateStatus(sid.id, "rejected")} className="flex-1 text-destructive border-destructive/20">
+                      <X className="h-3 w-3 mr-1" /> Reject
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">No sender IDs</div>
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <Card className="glass hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Sender ID</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">User</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Cost</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Date</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Actions</th>
@@ -70,7 +105,7 @@ export default function AdminSenderIDs() {
                   senderIds.map((sid) => (
                     <tr key={sid.id} className="border-b border-border/50">
                       <td className="p-4 font-mono text-sm font-medium">{sid.sender_id}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{sid.user_id.substring(0, 8)}...</td>
+                      <td className="p-4 text-sm">KES {sid.cost.toFixed(2)}</td>
                       <td className="p-4">
                         <Badge variant={statusColor[sid.status]} className="capitalize">{sid.status}</Badge>
                       </td>

@@ -117,6 +117,9 @@
   .glass {
     @apply bg-card/80 backdrop-blur-xl border border-border/50;
   }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
   .gradient-primary {
     background: linear-gradient(135deg, hsl(199 89% 48%), hsl(262 83% 58%));
   }

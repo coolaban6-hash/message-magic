@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
@@ -24,19 +24,46 @@ export default function AdminPayments() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-2xl font-display font-bold">Payments</h1>
-        <p className="text-muted-foreground">Track all platform payments</p>
+        <h1 className="text-xl md:text-2xl font-display font-bold">Payments</h1>
+        <p className="text-sm text-muted-foreground">Track all platform payments</p>
       </div>
 
-      <Card className="glass">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        ) : payments && payments.length > 0 ? (
+          payments.map((p) => (
+            <Card key={p.id} className="glass">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold">KES {p.amount.toFixed(2)}</span>
+                  <Badge variant={statusColor[p.status]} className="capitalize">{p.status}</Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{p.phone_number || "—"}</span>
+                  <span>{format(new Date(p.created_at), "MMM d, HH:mm")}</span>
+                </div>
+                {p.mpesa_receipt && (
+                  <p className="text-[10px] font-mono text-muted-foreground mt-1">Receipt: {p.mpesa_receipt}</p>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">No payments yet</div>
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <Card className="glass hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">User</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Amount</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Phone</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Receipt</th>
@@ -46,11 +73,10 @@ export default function AdminPayments() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Loading...</td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Loading...</td></tr>
                 ) : payments && payments.length > 0 ? (
                   payments.map((p) => (
                     <tr key={p.id} className="border-b border-border/50">
-                      <td className="p-4 text-sm">{p.user_id.substring(0, 8)}...</td>
                       <td className="p-4 text-sm font-medium">KES {p.amount.toFixed(2)}</td>
                       <td className="p-4 text-sm">{p.phone_number || "—"}</td>
                       <td className="p-4 text-sm font-mono text-xs">{p.mpesa_receipt || "—"}</td>
@@ -61,7 +87,7 @@ export default function AdminPayments() {
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No payments yet</td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No payments yet</td></tr>
                 )}
               </tbody>
             </table>
