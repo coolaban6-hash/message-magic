@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wallet, MessageSquare, CheckCircle, AlertCircle, TrendingUp } from "lucide-react";
+import { Wallet, MessageSquare, CheckCircle, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 export default function Overview() {
@@ -23,9 +24,9 @@ export default function Overview() {
       ]);
 
       const messages = messagesRes.data ?? [];
-      const totalSent = messages.reduce((sum, m) => sum + (m.recipients?.length || 0), 0);
-      const delivered = messages.filter((m) => m.status === "delivered").reduce((sum, m) => sum + (m.recipients?.length || 0), 0);
-      const todayCount = (todayRes.data ?? []).reduce((sum, m) => sum + (m.recipients?.length || 0), 0);
+      const totalSent = messages.reduce((sum, m) => sum + ((m.recipients as string[])?.length || 0), 0);
+      const delivered = messages.filter((m) => m.status === "delivered").reduce((sum, m) => sum + ((m.recipients as string[])?.length || 0), 0);
+      const todayCount = (todayRes.data ?? []).reduce((sum, m) => sum + ((m.recipients as string[])?.length || 0), 0);
 
       return {
         totalMessages: messagesRes.count ?? 0,
@@ -55,10 +56,10 @@ export default function Overview() {
   });
 
   const statCards = [
-    { label: "Wallet Balance", value: `KES ${wallet?.balance?.toFixed(2) ?? "0.00"}`, icon: Wallet, color: "text-primary" },
-    { label: "SMS Sent Today", value: stats?.todaySent ?? 0, icon: MessageSquare, color: "text-accent" },
-    { label: "Delivery Rate", value: `${stats?.deliveryRate ?? 0}%`, icon: CheckCircle, color: "text-success" },
-    { label: "Total Spent", value: `KES ${stats?.totalSpent?.toFixed(2) ?? "0.00"}`, icon: TrendingUp, color: "text-warning" },
+    { label: "Balance", value: `KES ${wallet?.balance?.toFixed(2) ?? "0.00"}`, icon: Wallet, color: "text-primary" },
+    { label: "Today", value: stats?.todaySent ?? 0, icon: MessageSquare, color: "text-accent" },
+    { label: "Delivery", value: `${stats?.deliveryRate ?? 0}%`, icon: CheckCircle, color: "text-success" },
+    { label: "Spent", value: `KES ${stats?.totalSpent?.toFixed(0) ?? "0"}`, icon: TrendingUp, color: "text-warning" },
   ];
 
   const statusColor: Record<string, string> = {
@@ -70,22 +71,22 @@ export default function Overview() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-2xl font-display font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's your SMS activity overview.</p>
+        <h1 className="text-xl md:text-2xl font-display font-bold">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">Welcome back! Here's your SMS overview.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {statCards.map((s) => (
           <Card key={s.label} className="glass">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{s.label}</p>
-                  <p className="text-2xl font-display font-bold mt-1">{s.value}</p>
+            <CardContent className="p-3 md:p-5">
+              <div className="flex items-center gap-2 md:gap-3">
+                <s.icon className={`h-5 w-5 md:h-8 md:w-8 ${s.color} opacity-80 shrink-0`} />
+                <div className="min-w-0">
+                  <p className="text-[10px] md:text-sm text-muted-foreground">{s.label}</p>
+                  <p className="text-base md:text-2xl font-display font-bold truncate">{s.value}</p>
                 </div>
-                <s.icon className={`h-8 w-8 ${s.color} opacity-80`} />
               </div>
             </CardContent>
           </Card>
@@ -93,21 +94,21 @@ export default function Overview() {
       </div>
 
       <Card className="glass">
-        <CardHeader>
-          <CardTitle className="font-display text-lg">Recent Messages</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="font-display text-base md:text-lg">Recent Messages</CardTitle>
         </CardHeader>
         <CardContent>
           {recentMessages && recentMessages.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {recentMessages.map((msg) => (
                 <div key={msg.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{msg.message.substring(0, 50)}...</p>
+                    <p className="text-sm font-medium truncate">{msg.message.substring(0, 40)}...</p>
                     <p className="text-xs text-muted-foreground">
-                      {msg.recipients.length} recipients • {msg.sender_id_text} • {format(new Date(msg.created_at), "MMM d, HH:mm")}
+                      {(msg.recipients as string[]).length} recipients • {format(new Date(msg.created_at), "MMM d, HH:mm")}
                     </p>
                   </div>
-                  <span className={`text-xs font-medium capitalize ${statusColor[msg.status] || ""}`}>
+                  <span className={`text-xs font-medium capitalize ml-2 ${statusColor[msg.status] || ""}`}>
                     {msg.status}
                   </span>
                 </div>
