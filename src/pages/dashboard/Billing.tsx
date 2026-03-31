@@ -35,6 +35,7 @@ export default function Billing() {
         body: { amount: numAmount, phone_number: phone },
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast.success("STK push sent! Check your phone to complete payment.");
       setDialogOpen(false);
       setAmount("");
@@ -60,17 +61,19 @@ export default function Billing() {
     enabled: !!user,
   });
 
+  const quickAmounts = [100, 500, 1000, 5000];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold">Billing</h1>
-          <p className="text-muted-foreground">Manage your wallet and purchase SMS credits</p>
+          <h1 className="text-xl md:text-2xl font-display font-bold">Billing</h1>
+          <p className="text-sm text-muted-foreground">Manage wallet & credits</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-primary">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className="gradient-primary" size="sm">
+              <Plus className="h-4 w-4 mr-1.5" />
               Buy Credits
             </Button>
           </DialogTrigger>
@@ -79,6 +82,19 @@ export default function Billing() {
               <DialogTitle className="font-display">Buy SMS Credits (M-Pesa)</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
+              <div className="grid grid-cols-4 gap-2">
+                {quickAmounts.map((qa) => (
+                  <Button
+                    key={qa}
+                    variant={amount === String(qa) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAmount(String(qa))}
+                    className="text-xs"
+                  >
+                    KES {qa}
+                  </Button>
+                ))}
+              </div>
               <div className="space-y-2">
                 <Label>Amount (KES)</Label>
                 <Input type="number" placeholder="e.g. 1000" value={amount} onChange={(e) => setAmount(e.target.value)} min={10} />
@@ -99,42 +115,61 @@ export default function Billing() {
 
       {/* Wallet Card */}
       <Card className="glass border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-xl gradient-primary flex items-center justify-center">
-              <Wallet className="h-7 w-7 text-primary-foreground" />
+        <CardContent className="p-4 md:p-6">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="h-12 w-12 md:h-14 md:w-14 rounded-xl gradient-primary flex items-center justify-center shrink-0">
+              <Wallet className="h-6 w-6 md:h-7 md:w-7 text-primary-foreground" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Available Balance</p>
-              <p className="text-3xl font-display font-bold">KES {wallet?.balance?.toFixed(2) ?? "0.00"}</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Available Balance</p>
+              <p className="text-2xl md:text-3xl font-display font-bold">KES {wallet?.balance?.toFixed(2) ?? "0.00"}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Pricing Info */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { tier: "Standard", rate: "0.50", min: "0" },
+          { tier: "Bulk 10k+", rate: "0.40", min: "10,000" },
+          { tier: "Bulk 100k+", rate: "0.35", min: "100,000" },
+        ].map((p) => (
+          <Card key={p.tier} className="glass">
+            <CardContent className="p-3 text-center">
+              <p className="text-[10px] md:text-xs text-muted-foreground">{p.tier}</p>
+              <p className="text-lg md:text-xl font-display font-bold">KES {p.rate}</p>
+              <p className="text-[10px] text-muted-foreground">/SMS</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       {/* Transactions */}
       <Card className="glass">
-        <CardHeader>
-          <CardTitle className="font-display text-lg">Transaction History</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="font-display text-base md:text-lg">Transactions</CardTitle>
         </CardHeader>
         <CardContent>
           {transactions && transactions.length > 0 ? (
             <div className="space-y-2">
               {transactions.map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
                     {tx.type === "credit" ? (
-                      <ArrowDownLeft className="h-4 w-4 text-success" />
+                      <ArrowDownLeft className="h-4 w-4 text-success shrink-0" />
+                    ) : tx.type === "refund" ? (
+                      <ArrowDownLeft className="h-4 w-4 text-warning shrink-0" />
                     ) : (
-                      <ArrowUpRight className="h-4 w-4 text-destructive" />
+                      <ArrowUpRight className="h-4 w-4 text-destructive shrink-0" />
                     )}
-                    <div>
-                      <p className="text-sm font-medium">{tx.description || tx.type}</p>
-                      <p className="text-xs text-muted-foreground">{format(new Date(tx.created_at), "MMM d, yyyy HH:mm")}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs md:text-sm font-medium truncate">{tx.description || tx.type}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">{format(new Date(tx.created_at), "MMM d, HH:mm")}</p>
                     </div>
                   </div>
-                  <span className={`font-medium text-sm ${tx.type === "credit" ? "text-success" : "text-destructive"}`}>
-                    {tx.type === "credit" ? "+" : "-"}KES {tx.amount.toFixed(2)}
+                  <span className={`font-medium text-xs md:text-sm shrink-0 ml-2 ${tx.type === "credit" || tx.type === "refund" ? "text-success" : "text-destructive"}`}>
+                    {tx.type === "credit" || tx.type === "refund" ? "+" : "-"}KES {tx.amount.toFixed(2)}
                   </span>
                 </div>
               ))}
