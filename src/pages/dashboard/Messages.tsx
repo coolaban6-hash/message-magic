@@ -43,23 +43,32 @@ export default function Messages() {
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">Loading...</div>
         ) : messages && messages.length > 0 ? (
-          messages.map((msg) => (
-            <Card key={msg.id} className="glass">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <p className="text-sm font-medium flex-1 truncate mr-2">{msg.message.substring(0, 60)}</p>
-                  <Badge variant={statusVariant[msg.status] || "outline"} className="capitalize text-[10px] shrink-0">
-                    {msg.status}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{(msg.recipients as string[]).length} recipients • {msg.sender_id_text}</span>
-                  <span>KES {msg.total_cost.toFixed(2)}</span>
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-1">{format(new Date(msg.created_at), "MMM d, yyyy HH:mm")}</p>
-              </CardContent>
-            </Card>
-          ))
+          messages.map((msg) => {
+            const recipientCount = (msg.recipients as string[]).length;
+            const deliveredCount = msg.delivered_count ?? (msg.status === "delivered" ? recipientCount : 0);
+            const failedCount = msg.failed_count ?? (msg.status === "failed" ? recipientCount : 0);
+
+            return (
+              <Card key={msg.id} className="glass">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="text-sm font-medium flex-1 truncate mr-2">{msg.message.substring(0, 60)}</p>
+                    <Badge variant={statusVariant[msg.status] || "outline"} className="capitalize text-[10px] shrink-0">
+                      {msg.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{recipientCount} recipients • {msg.sender_id_text}</span>
+                    <span>KES {msg.total_cost.toFixed(2)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Delivered {deliveredCount}{failedCount ? ` • Failed ${failedCount}` : ""}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{format(new Date(msg.created_at), "MMM d, yyyy HH:mm")}</p>
+                </CardContent>
+              </Card>
+            );
+          })
         ) : (
           <div className="text-center py-8 text-muted-foreground">No messages found</div>
         )}
@@ -84,20 +93,29 @@ export default function Messages() {
                 {isLoading ? (
                   <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Loading...</td></tr>
                 ) : messages && messages.length > 0 ? (
-                  messages.map((msg) => (
-                    <tr key={msg.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                      <td className="p-4 text-sm max-w-[200px] truncate">{msg.message}</td>
-                      <td className="p-4 text-sm font-mono text-xs">{msg.sender_id_text}</td>
-                      <td className="p-4 text-sm">{(msg.recipients as string[]).length}</td>
-                      <td className="p-4 text-sm font-medium">KES {msg.total_cost.toFixed(2)}</td>
-                      <td className="p-4">
-                        <Badge variant={statusVariant[msg.status] || "outline"} className="capitalize text-xs">
-                          {msg.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-sm text-muted-foreground">{format(new Date(msg.created_at), "MMM d, HH:mm")}</td>
-                    </tr>
-                  ))
+                  messages.map((msg) => {
+                    const recipientCount = (msg.recipients as string[]).length;
+                    const deliveredCount = msg.delivered_count ?? (msg.status === "delivered" ? recipientCount : 0);
+                    const failedCount = msg.failed_count ?? (msg.status === "failed" ? recipientCount : 0);
+
+                    return (
+                      <tr key={msg.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="p-4 text-sm max-w-[200px] truncate">{msg.message}</td>
+                        <td className="p-4 text-sm font-mono text-xs">{msg.sender_id_text}</td>
+                        <td className="p-4 text-sm">
+                          <div>{recipientCount}</div>
+                          <div className="text-[10px] text-muted-foreground">{deliveredCount} delivered{failedCount ? ` • ${failedCount} failed` : ""}</div>
+                        </td>
+                        <td className="p-4 text-sm font-medium">KES {msg.total_cost.toFixed(2)}</td>
+                        <td className="p-4">
+                          <Badge variant={statusVariant[msg.status] || "outline"} className="capitalize text-xs">
+                            {msg.status}
+                          </Badge>
+                        </td>
+                        <td className="p-4 text-sm text-muted-foreground">{format(new Date(msg.created_at), "MMM d, HH:mm")}</td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No messages found</td></tr>
                 )}

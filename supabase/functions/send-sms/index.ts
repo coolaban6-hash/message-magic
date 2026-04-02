@@ -68,6 +68,76 @@ const readProviderResponse = async (response: Response) => {
   }
 };
 
+const toNumberOrNull = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const extractProviderMessageId = (payload: any): string | null => {
+  const candidates = [
+    payload?.provider_message_id,
+    payload?.message_id,
+    payload?.uid,
+    payload?.tracking_id,
+    payload?.reference,
+    payload?.data?.provider_message_id,
+    payload?.data?.message_id,
+    payload?.data?.uid,
+    payload?.data?.tracking_id,
+    payload?.data?.reference,
+    Array.isArray(payload?.messages) ? payload.messages[0]?.provider_message_id : null,
+    Array.isArray(payload?.messages) ? payload.messages[0]?.message_id : null,
+    Array.isArray(payload?.messages) ? payload.messages[0]?.uid : null,
+    Array.isArray(payload?.data) ? payload.data[0]?.provider_message_id : null,
+    Array.isArray(payload?.data) ? payload.data[0]?.message_id : null,
+    Array.isArray(payload?.data) ? payload.data[0]?.uid : null,
+  ];
+
+  const match = candidates.find((value) => value !== null && value !== undefined && value !== "");
+  return match === undefined ? null : String(match);
+};
+
+const extractDeliveryPayload = (payload: any) => {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const providerMessageId = extractProviderMessageId(payload);
+  const status = payload?.delivery_status
+    ?? payload?.message_status
+    ?? payload?.status
+    ?? payload?.state
+    ?? payload?.data?.delivery_status
+    ?? payload?.data?.message_status
+    ?? payload?.data?.status
+    ?? payload?.data?.state;
+
+  if (!providerMessageId || !status) {
+    return null;
+  }
+
+  return {
+    providerMessageId,
+    status: String(status),
+    deliveredCount: toNumberOrNull(
+      payload?.delivered_count
+      ?? payload?.delivered
+      ?? payload?.success_count
+      ?? payload?.data?.delivered_count
+      ?? payload?.data?.delivered
+      ?? payload?.data?.success_count,
+    ),
+    failedCount: toNumberOrNull(
+      payload?.failed_count
+      ?? payload?.failed
+      ?? payload?.error_count
+      ?? payload?.data?.failed_count
+      ?? payload?.data?.failed
+      ?? payload?.data?.error_count,
+    ),
+  };
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -81,13 +151,43 @@ serve(async (req) => {
     const talksasaMaxRecipients = parseInt(Deno.env.get("TALKSASA_MAX_RECIPIENTS") || "500");
     const talksasaDefaultSenderId = Deno.env.get("TALKSASA_DEFAULT_SENDER_ID") || "ABAN_COOL";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const url = new URL(req.url);
+    const authHeader = req.headers.get("Authorization");
+    const body = req.method === "GET" ? null : await req.json().catch(() => null);
 
     if (!talksasaToken) {
       return jsonResponse({ error: "SMS provider is not configured" }, 500);
     }
 
+    const deliveryPayload = extractDeliveryPayload(body);
+    if ((!authHeader || url.searchParams.get("action") === "delivery-report") && deliveryPayload) {
+      const { data: updatedMessage, error: deliveryError } = await supabase.rpc("record_message_delivery", {
+        _provider_message_id: deliveryPayload.providerMessageId,
+        _status: deliveryPayload.status,
+        _delivered_count: deliveryPayload.deliveredCount,
+        _failed_count: deliveryPayload.failedCount,
+      });
+
+      if (deliveryError) {
+        console.error("Delivery report update failed:", deliveryError, body);
+        return jsonResponse({ error: "Failed to process delivery report" }, 400);
+      }
+
+      await supabase.from("system_logs").insert({
+        user_id: updatedMessage?.user_id ?? null,
+        action: "sms_delivery_report_received",
+        details: {
+          provider_message_id: deliveryPayload.providerMessageId,
+          status: deliveryPayload.status,
+          delivered_count: deliveryPayload.deliveredCount,
+          failed_count: deliveryPayload.failedCount,
+        },
+      });
+
+      return jsonResponse({ success: true });
+    }
+
     // Check auth
-    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
@@ -116,14 +216,12 @@ serve(async (req) => {
     }
 
     // Handle balance check
-    const url = new URL(req.url);
     if (url.searchParams.get("action") === "balance") {
       const { data: wallet } = await supabase.from("wallets").select("balance, currency").eq("user_id", userId).single();
       return jsonResponse({ balance: wallet?.balance ?? 0, currency: wallet?.currency ?? "KES" });
     }
 
     // Parse body
-    const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return jsonResponse({ error: "Invalid request body" }, 400);
     }
@@ -206,12 +304,15 @@ serve(async (req) => {
       total_cost: totalCost,
       status: "queued",
       sent_count: 0,
+      delivered_count: 0,
+      failed_count: 0,
       api_request: !user,
     }).select().single();
 
     // Send via Talksasa in batches
     let totalSent = 0;
     let totalFailed = 0;
+    let providerMessageId: string | null = null;
     const batchSize = talksasaMaxRecipients;
     const batches = [];
 
@@ -246,6 +347,10 @@ serve(async (req) => {
           talksasaData?.message_id ||
           talksasaData?.data?.uid
         )) {
+          const batchProviderMessageId = extractProviderMessageId(talksasaData);
+          if (!providerMessageId && batchProviderMessageId) {
+            providerMessageId = batchProviderMessageId;
+          }
           totalSent += batch.length;
         } else {
           console.error("Talksasa batch error:", talksasaRes.status, talksasaData ?? talksasaText);
@@ -263,6 +368,7 @@ serve(async (req) => {
       status: finalStatus,
       sent_count: totalSent,
       failed_count: totalFailed,
+      provider_message_id: providerMessageId,
     }).eq("id", msgRecord?.id);
 
     // If ALL failed, refund credits
@@ -300,7 +406,15 @@ serve(async (req) => {
     await supabase.from("system_logs").insert({
       user_id: userId,
       action: "sms_sent",
-      details: { message_id: msgRecord?.id, recipients: safeRecipients.length, sent: totalSent, failed: totalFailed, cost: totalCost, sender_id: requestedSenderId },
+      details: {
+        message_id: msgRecord?.id,
+        provider_message_id: providerMessageId,
+        recipients: safeRecipients.length,
+        sent: totalSent,
+        failed: totalFailed,
+        cost: totalCost,
+        sender_id: requestedSenderId,
+      },
     });
 
     return jsonResponse({
