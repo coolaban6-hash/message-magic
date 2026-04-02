@@ -55,6 +55,7 @@ export type Database = {
           failed_count: number | null
           id: string
           message: string
+          provider_message_id: string | null
           recipients: string[]
           segment_count: number
           sender_id_text: string
@@ -71,6 +72,7 @@ export type Database = {
           failed_count?: number | null
           id?: string
           message: string
+          provider_message_id?: string | null
           recipients: string[]
           segment_count?: number
           sender_id_text?: string
@@ -87,6 +89,7 @@ export type Database = {
           failed_count?: number | null
           id?: string
           message?: string
+          provider_message_id?: string | null
           recipients?: string[]
           segment_count?: number
           sender_id_text?: string
@@ -327,6 +330,37 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      record_message_delivery: {
+        Args: {
+          _delivered_count?: number
+          _failed_count?: number
+          _provider_message_id: string
+          _status: string
+        }
+        Returns: {
+          api_request: boolean
+          created_at: string
+          delivered_count: number | null
+          failed_count: number | null
+          id: string
+          message: string
+          provider_message_id: string | null
+          recipients: string[]
+          segment_count: number
+          sender_id_text: string
+          sent_count: number | null
+          status: Database["public"]["Enums"]["message_status"]
+          total_cost: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
