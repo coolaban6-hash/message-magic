@@ -11,6 +11,8 @@ const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringif
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
 
+const PRODUCTION_APP_URL = "https://bulksms.abancool.com";
+
 const normalizeKenyanPhone = (value: string | null | undefined) => {
   if (!value) return null;
 
@@ -35,15 +37,20 @@ const normalizeKenyanPhone = (value: string | null | undefined) => {
   return null;
 };
 
-const resolveIntaSendBaseUrl = (configuredBaseUrl?: string | null) => {
-  const fallback = "https://api.intasend.com";
-  const trimmed = configuredBaseUrl?.trim().replace(/\/+$/, "") || fallback;
+const LIVE_INTASEND_STK_URL = "https://api.intasend.com/api/v1/payment/mpesa-stk-push/";
 
-  if (trimmed.includes("payment.intasend.com")) {
-    return fallback;
+const resolveIntaSendStkUrl = (configuredBaseUrl?: string | null) => {
+  const trimmed = configuredBaseUrl?.trim().replace(/\/+$/, "") || "";
+
+  if (!trimmed) {
+    return LIVE_INTASEND_STK_URL;
   }
 
-  return trimmed;
+  if (trimmed.includes("/api/v1/payment/mpesa-stk-push")) {
+    return `${trimmed}/`.replace(/\/+$/, "/");
+  }
+
+  return LIVE_INTASEND_STK_URL;
 };
 
 const readProviderResponse = async (response: Response) => {
@@ -69,10 +76,11 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const intasendSecretKey = Deno.env.get("INTASEND_SECRET_KEY");
-    const intasendBaseUrl = resolveIntaSendBaseUrl(Deno.env.get("INTASEND_BASE_URL"));
+    const intasendPublicKey = Deno.env.get("INTASEND_PUBLISHABLE_KEY");
+    const intasendStkUrl = resolveIntaSendStkUrl(Deno.env.get("INTASEND_BASE_URL"));
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    if (!intasendSecretKey) {
+    if (!intasendSecretKey || !intasendPublicKey) {
       return jsonResponse({ error: "Payment service is not configured" }, 500);
     }
 
@@ -127,7 +135,14 @@ serve(async (req) => {
         ? `ABANCOOL Sender ID: ${String(sender_id ?? "").toUpperCase()}${network ? ` (${network})` : ""}`
         : "ABANCOOL Bulk SMS Credits";
 
-      const intasendRes = await fetch(`${intasendBaseUrl}/api/v1/payment/mpesa-stk-push/`, {
+      console.log("Initiating IntaSend STK push", JSON.stringify({
+        url: intasendStkUrl,
+        api_ref: apiRef,
+        amount: amountValue,
+        phone_number: normalizedPhone,
+      }));
+
+      const intasendRes = await fetch(intasendStkUrl, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -135,10 +150,13 @@ serve(async (req) => {
           "Authorization": `Bearer ${intasendSecretKey}`,
         },
         body: JSON.stringify({
+          public_key: intasendPublicKey,
           amount: amountValue.toFixed(2),
+          currency: "KES",
           phone_number: normalizedPhone,
           api_ref: apiRef,
           narrative,
+          redirect_url: `${PRODUCTION_APP_URL}/login`,
           ...(user.email ? { email: user.email } : {}),
         }),
       });

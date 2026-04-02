@@ -19,13 +19,17 @@ export default function Overview() {
       today.setHours(0, 0, 0, 0);
 
       const [messagesRes, todayRes] = await Promise.all([
-        supabase.from("messages").select("id, status, total_cost, recipients, created_at", { count: "exact" }).eq("user_id", user.id),
+        supabase.from("messages").select("id, status, total_cost, recipients, created_at, delivered_count, failed_count", { count: "exact" }).eq("user_id", user.id),
         supabase.from("messages").select("id, recipients", { count: "exact" }).eq("user_id", user.id).gte("created_at", today.toISOString()),
       ]);
 
       const messages = messagesRes.data ?? [];
       const totalSent = messages.reduce((sum, m) => sum + ((m.recipients as string[])?.length || 0), 0);
-      const delivered = messages.filter((m) => m.status === "delivered").reduce((sum, m) => sum + ((m.recipients as string[])?.length || 0), 0);
+      const delivered = messages.reduce((sum, m) => {
+        const recipientCount = ((m.recipients as string[])?.length || 0);
+        const deliveredCount = m.delivered_count ?? (m.status === "delivered" ? recipientCount : 0);
+        return sum + deliveredCount;
+      }, 0);
       const todayCount = (todayRes.data ?? []).reduce((sum, m) => sum + ((m.recipients as string[])?.length || 0), 0);
 
       return {
@@ -100,19 +104,25 @@ export default function Overview() {
         <CardContent>
           {recentMessages && recentMessages.length > 0 ? (
             <div className="space-y-2">
-              {recentMessages.map((msg) => (
-                <div key={msg.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{msg.message.substring(0, 40)}...</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(msg.recipients as string[]).length} recipients • {format(new Date(msg.created_at), "MMM d, HH:mm")}
-                    </p>
+              {recentMessages.map((msg) => {
+                const recipientCount = (msg.recipients as string[])?.length || 0;
+                const deliveredCount = msg.delivered_count ?? (msg.status === "delivered" ? recipientCount : 0);
+                const failedCount = msg.failed_count ?? (msg.status === "failed" ? recipientCount : 0);
+
+                return (
+                  <div key={msg.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{msg.message.substring(0, 40)}...</p>
+                      <p className="text-xs text-muted-foreground">
+                        {recipientCount} recipients • Delivered {deliveredCount}{failedCount ? ` • Failed ${failedCount}` : ""} • {format(new Date(msg.created_at), "MMM d, HH:mm")}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-medium capitalize ml-2 ${statusColor[msg.status] || ""}`}>
+                      {msg.status}
+                    </span>
                   </div>
-                  <span className={`text-xs font-medium capitalize ml-2 ${statusColor[msg.status] || ""}`}>
-                    {msg.status}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-muted-foreground text-sm text-center py-8">No messages yet. Send your first SMS!</p>

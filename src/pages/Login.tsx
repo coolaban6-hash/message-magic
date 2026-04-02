@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { MessageSquare, Loader2 } from "lucide-react";
 
+const PRODUCTION_APP_URL = "https://bulksms.abancool.com";
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const isPreviewHost = window.location.hostname.includes("lovable.app") || window.location.hostname.includes("lovableproject.com");
+    const hasAuthPayload = window.location.search.includes("token_hash=")
+      || window.location.search.includes("type=")
+      || window.location.hash.includes("access_token=")
+      || window.location.hash.includes("refresh_token=");
+
+    if (isPreviewHost && hasAuthPayload) {
+      window.location.replace(`${PRODUCTION_APP_URL}/login${window.location.search}${window.location.hash}`);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
