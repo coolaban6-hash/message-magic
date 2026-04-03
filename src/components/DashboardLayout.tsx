@@ -30,8 +30,8 @@ const adminNav = [
 const userBottomNav = [
   { label: "Home", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Send", icon: Send, href: "/dashboard/sms" },
+  { label: "Contacts", icon: BookUser, href: "/dashboard/contacts" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/messages" },
-  { label: "Billing", icon: Wallet, href: "/dashboard/billing" },
   { label: "More", icon: Menu, href: "" },
 ];
 
