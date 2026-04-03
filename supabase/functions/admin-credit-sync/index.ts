@@ -46,19 +46,38 @@ serve(async (req) => {
     const action = url.searchParams.get("action") || "balance";
 
     if (action === "balance") {
-      // Get Talksasa account balance
-      const res = await fetch(`${talksasaBaseUrl}/v1/account/balance`, {
-        headers: { "Authorization": `Bearer ${talksasaToken}` },
+      // Get Talksasa (MobileSasa) account balance
+      const balanceUrl = `${talksasaBaseUrl}/v1/get-balance`;
+      console.log("Fetching balance from:", balanceUrl);
+      const res = await fetch(balanceUrl, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${talksasaToken}`,
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
       });
-      const data = await res.json();
+
+      const rawText = await res.text();
+      console.log("Balance response status:", res.status, "body:", rawText.substring(0, 500));
+
+      let providerBalance = 0;
+      let providerCurrency = "KES";
+      try {
+        const data = JSON.parse(rawText);
+        providerBalance = data.balance ?? data.credits ?? 0;
+        providerCurrency = data.currency ?? "KES";
+      } catch (e) {
+        console.error("Failed to parse balance response:", e.message);
+      }
 
       // Get total system balance (all user wallets)
       const { data: wallets } = await supabase.from("wallets").select("balance");
       const totalSystemBalance = (wallets ?? []).reduce((s, w) => s + (w.balance || 0), 0);
 
       return new Response(JSON.stringify({
-        provider_balance: data.balance ?? data.credits ?? 0,
-        provider_currency: data.currency ?? "KES",
+        provider_balance: providerBalance,
+        provider_currency: providerCurrency,
         system_balance: totalSystemBalance,
         synced_at: new Date().toISOString(),
       }), {
