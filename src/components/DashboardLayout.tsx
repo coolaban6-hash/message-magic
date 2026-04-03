@@ -74,6 +74,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="fixed bottom-16 left-0 right-0 z-50 p-3 animate-fade-in">
             <div className="bg-card border border-border rounded-2xl p-2 shadow-2xl mx-2">
               <Link
+                to="/dashboard/billing"
+                onClick={() => setMoreMenuOpen(false)}
+                className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                  location.pathname === "/dashboard/billing" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"
+                )}
+              >
+                <Wallet className="h-5 w-5" /> Billing
+              </Link>
+              <Link
                 to="/dashboard/sender-ids"
                 onClick={() => setMoreMenuOpen(false)}
                 className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
