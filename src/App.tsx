@@ -18,6 +18,7 @@ import Messages from "./pages/dashboard/Messages";
 import Billing from "./pages/dashboard/Billing";
 import SenderIDs from "./pages/dashboard/SenderIDs";
 import APIKeys from "./pages/dashboard/APIKeys";
+import Contacts from "./pages/dashboard/Contacts";
 
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminUsers from "./pages/admin/AdminUsers";
