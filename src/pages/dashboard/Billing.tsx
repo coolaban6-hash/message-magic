@@ -24,6 +24,31 @@ export default function Billing() {
   const [buying, setBuying] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const pollPaymentStatus = async (paymentId: string) => {
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const { data } = await supabase.functions.invoke("buy-credits", {
+          body: { action: "check-payment", payment_id: paymentId },
+        });
+        if (data?.status === "completed") {
+          toast.success(`KES ${data.amount} credited to your wallet!`);
+          queryClient.invalidateQueries({ queryKey: ["wallet"] });
+          queryClient.invalidateQueries({ queryKey: ["payments"] });
+          queryClient.invalidateQueries({ queryKey: ["wallet_transactions"] });
+          return;
+        }
+        if (data?.status === "failed") {
+          toast.error("Payment failed or was cancelled.");
+          queryClient.invalidateQueries({ queryKey: ["payments"] });
+          return;
+        }
+      } catch { /* continue polling */ }
+    }
+    toast.info("Payment is still processing. Your balance will update shortly.");
+    queryClient.invalidateQueries({ queryKey: ["payments"] });
+  };
+
   const handleBuyCredits = async () => {
     const numAmount = parseFloat(amount);
     if (!numAmount || numAmount < 10) { toast.error("Minimum amount is KES 10"); return; }
@@ -40,6 +65,10 @@ export default function Billing() {
       setDialogOpen(false);
       setAmount("");
       setPhone("");
+      // Start polling for payment completion in background
+      if (data?.payment_id) {
+        pollPaymentStatus(data.payment_id);
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to initiate payment");
     }

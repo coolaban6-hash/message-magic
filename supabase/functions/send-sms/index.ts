@@ -363,10 +363,12 @@ serve(async (req) => {
     }
 
     // Update message record with results
-    const finalStatus = totalFailed === recipients.length ? "failed" : totalSent > 0 ? "sent" : "failed";
+    // Mark as "delivered" when sent succeeds — Talksasa doesn't send DLR webhooks
+    const finalStatus = totalFailed === recipients.length ? "failed" : totalSent > 0 ? "delivered" : "failed";
     await supabase.from("messages").update({
       status: finalStatus,
       sent_count: totalSent,
+      delivered_count: totalSent,
       failed_count: totalFailed,
       provider_message_id: providerMessageId,
     }).eq("id", msgRecord?.id);
