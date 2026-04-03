@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, MessageSquare, Wallet, CreditCard, Hash, Code, Users,
-  Shield, FileText, LogOut, Menu, X, Send
+  Shield, FileText, LogOut, Menu, X, Send, BookUser
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
