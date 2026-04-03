@@ -46,8 +46,8 @@ serve(async (req) => {
     const action = url.searchParams.get("action") || "balance";
 
     if (action === "balance") {
-      // Try Talksasa v3 SMS units endpoint first, fallback to profile
-      const balanceUrl = `${talksasaBaseUrl}/sms/units`;
+      // Try Talksasa v3 profile endpoint for balance
+      const balanceUrl = `${talksasaBaseUrl}/profile`;
       console.log("Fetching balance from:", balanceUrl);
       const res = await fetch(balanceUrl, {
         method: "GET",
