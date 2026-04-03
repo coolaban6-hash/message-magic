@@ -46,8 +46,8 @@ serve(async (req) => {
     const action = url.searchParams.get("action") || "balance";
 
     if (action === "balance") {
-      // MobileSasa/Talksasa balance endpoint (not the v3 SMS API)
-      const balanceUrl = "https://api.mobilesasa.com/v1/get-balance";
+      // Try Talksasa v3 SMS units endpoint first, fallback to profile
+      const balanceUrl = `${talksasaBaseUrl}/sms/units`;
       console.log("Fetching balance from:", balanceUrl);
       const res = await fetch(balanceUrl, {
         method: "GET",
