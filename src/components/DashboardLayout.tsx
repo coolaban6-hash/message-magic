@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 const userNav = [
   { label: "Overview", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Send SMS", icon: Send, href: "/dashboard/sms" },
+  { label: "Contacts", icon: BookUser, href: "/dashboard/contacts" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/messages" },
   { label: "Billing", icon: Wallet, href: "/dashboard/billing" },
   { label: "Sender IDs", icon: Hash, href: "/dashboard/sender-ids" },
