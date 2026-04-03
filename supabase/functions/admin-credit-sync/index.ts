@@ -46,44 +46,32 @@ serve(async (req) => {
     const action = url.searchParams.get("action") || "balance";
 
     if (action === "balance") {
-      // Try multiple endpoints to get provider balance
-      const endpoints = [
-        `${talksasaBaseUrl}/balance`,
-        `${talksasaBaseUrl}/account/balance`,
-        "https://bulksms.talksasa.com/api/v1/get-balance",
-        "https://api.mobilesasa.com/v1/get-balance",
-      ];
-
+      // Talksasa v3 balance endpoint
+      const balanceUrl = `${talksasaBaseUrl}/balance`;
       let providerBalance = 0;
       let providerCurrency = "KES";
-      let balanceFound = false;
 
-      for (const url of endpoints) {
-        try {
-          console.log("Trying balance endpoint:", url);
-          const res = await fetch(url, {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${talksasaToken}`,
-              "Accept": "application/json",
-              "Content-Type": "application/json",
-            },
-          });
-          const rawText = await res.text();
-          console.log("Response:", res.status, rawText.substring(0, 300));
-          
-          if (res.ok) {
-            const data = JSON.parse(rawText);
-            if (data.balance !== undefined || data.credits !== undefined || data.remaining_units !== undefined) {
-              providerBalance = data.balance ?? data.credits ?? data.remaining_units ?? 0;
-              providerCurrency = data.currency ?? "KES";
-              balanceFound = true;
-              break;
-            }
-          }
-        } catch (e) {
-          console.log("Endpoint failed:", url, e.message);
+      try {
+        const res = await fetch(balanceUrl, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${talksasaToken}`,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+        });
+        const rawText = await res.text();
+        console.log("Balance response:", res.status, rawText.substring(0, 300));
+
+        if (res.ok) {
+          const data = JSON.parse(rawText);
+          // Response: {"status":"success","data":{"remaining_balance":"Ksh1,092"}}
+          const rawBalance = data?.data?.remaining_balance ?? data?.balance ?? data?.credits ?? "0";
+          // Parse "Ksh1,092" -> 1092
+          providerBalance = parseFloat(String(rawBalance).replace(/[^0-9.]/g, "")) || 0;
         }
+      } catch (e) {
+        console.error("Balance fetch failed:", e.message);
       }
 
       // Get total system balance (all user wallets)
