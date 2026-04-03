@@ -101,7 +101,90 @@ serve(async (req) => {
       return jsonResponse({ error: "Invalid request body" }, 400);
     }
 
-    const { amount, phone_number, purpose = "credits", sender_id, network, business_name } = body;
+    // ── CHECK PAYMENT STATUS ACTION ──
+    if (body.action === "check-payment" && body.payment_id) {
+      const { data: payment } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("id", body.payment_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (!payment) {
+        return jsonResponse({ error: "Payment not found" }, 404);
+      }
+
+      // Already processed
+      if (payment.status === "completed" || payment.status === "failed") {
+        return jsonResponse({ status: payment.status, amount: payment.amount });
+      }
+
+      // Poll IntaSend for status
+      if (payment.checkout_request_id) {
+        try {
+          const checkUrl = `https://api.intasend.com/api/v1/payment/status/`;
+          const checkRes = await fetch(checkUrl, {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${intasendSecretKey}`,
+            },
+            body: JSON.stringify({ invoice_id: payment.checkout_request_id }),
+          });
+
+          const { data: checkData } = await readProviderResponse(checkRes);
+          console.log("IntaSend status check:", JSON.stringify({ status: checkRes.status, body: checkData }));
+
+          const invoiceState = checkData?.invoice?.state ?? checkData?.state ?? checkData?.status;
+
+          if (invoiceState === "COMPLETE" || invoiceState === "SUCCESSFUL" || invoiceState === "PROCESSING") {
+            // Credit wallet
+            const { data: wallet } = await supabase
+              .from("wallets")
+              .select("*")
+              .eq("user_id", user.id)
+              .single();
+
+            if (wallet) {
+              const newBalance = wallet.balance + payment.amount;
+              await supabase.from("wallets").update({ balance: newBalance }).eq("id", wallet.id);
+
+              await supabase.from("wallet_transactions").insert({
+                user_id: user.id,
+                wallet_id: wallet.id,
+                type: "credit",
+                amount: payment.amount,
+                balance_before: wallet.balance,
+                balance_after: newBalance,
+                description: `M-Pesa top-up`,
+                reference: checkData?.invoice?.invoice_id ?? payment.checkout_request_id,
+              });
+            }
+
+            await supabase.from("payments").update({
+              status: "completed",
+              mpesa_receipt: checkData?.invoice?.invoice_id ?? checkData?.mpesa_reference ?? payment.checkout_request_id,
+            }).eq("id", payment.id);
+
+            await supabase.from("system_logs").insert({
+              user_id: user.id,
+              action: "credit_purchase_completed",
+              details: { payment_id: payment.id, amount: payment.amount },
+            });
+
+            return jsonResponse({ status: "completed", amount: payment.amount });
+          } else if (invoiceState === "FAILED" || invoiceState === "CANCELLED") {
+            await supabase.from("payments").update({ status: "failed" }).eq("id", payment.id);
+            return jsonResponse({ status: "failed" });
+          }
+        } catch (pollErr) {
+          console.error("IntaSend poll error:", pollErr);
+        }
+      }
+
+      return jsonResponse({ status: payment.status });
+    }
     const amountValue = Number(amount);
     const normalizedPhone = normalizeKenyanPhone(phone_number);
 
