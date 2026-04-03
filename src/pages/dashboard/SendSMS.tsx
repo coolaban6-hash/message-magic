@@ -19,10 +19,22 @@ export default function SendSMS() {
   const { data: wallet } = useWallet();
   const queryClient = useQueryClient();
 
+  const routerLocation = useRouterLocation();
+
   const [recipientsInput, setRecipientsInput] = useState("");
   const [message, setMessage] = useState("");
   const [senderId, setSenderId] = useState("ABAN_COOL");
   const [sending, setSending] = useState(false);
+
+  // Accept pre-filled recipients from Contacts page
+  useEffect(() => {
+    const state = routerLocation.state as { prefillRecipients?: string } | null;
+    if (state?.prefillRecipients) {
+      setRecipientsInput(state.prefillRecipients);
+      // Clear the state so it doesn't persist on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [routerLocation.state]);
 
   const { data: senderIds } = useQuery({
     queryKey: ["sender_ids", user?.id],
