@@ -18,6 +18,7 @@ import Messages from "./pages/dashboard/Messages";
 import Billing from "./pages/dashboard/Billing";
 import SenderIDs from "./pages/dashboard/SenderIDs";
 import APIKeys from "./pages/dashboard/APIKeys";
+import Contacts from "./pages/dashboard/Contacts";
 
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/dashboard/billing" element={<ProtectedRoute><DashboardLayout><Billing /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/sender-ids" element={<ProtectedRoute><DashboardLayout><SenderIDs /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/api" element={<ProtectedRoute><DashboardLayout><APIKeys /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/dashboard/contacts" element={<ProtectedRoute><DashboardLayout><Contacts /></DashboardLayout></ProtectedRoute>} />
 
             {/* Admin Dashboard */}
             <Route path="/admin" element={<ProtectedRoute requireAdmin><DashboardLayout><AdminOverview /></DashboardLayout></ProtectedRoute>} />
