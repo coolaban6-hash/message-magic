@@ -121,10 +121,10 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(199 89% 48%), hsl(262 83% 58%));
+    background: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 83% 40%));
   }
   .gradient-text {
-    background: linear-gradient(135deg, hsl(199 89% 48%), hsl(262 83% 58%));
+    background: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 83% 40%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

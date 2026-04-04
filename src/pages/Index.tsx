@@ -35,12 +35,7 @@ export default function Index() {
           <div className="mt-8 flex items-center justify-center gap-4">
             <Link to="/register">
               <Button size="lg" className="gradient-primary">
-                Start Sending <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button size="lg" variant="outline">
-                View Dashboard
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </div>
