@@ -25,6 +25,7 @@ const adminNav = [
   { label: "Users", icon: Users, href: "/admin/users" },
   { label: "Sender IDs", icon: Hash, href: "/admin/sender-ids" },
   { label: "Payments", icon: CreditCard, href: "/admin/payments" },
+  { label: "Tickets", icon: TicketCheck, href: "/admin/tickets" },
   { label: "Logs", icon: FileText, href: "/admin/logs" },
 ];
 
