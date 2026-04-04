@@ -40,9 +40,9 @@ const userBottomNav = [
 const adminBottomNav = [
   { label: "Home", icon: Shield, href: "/admin" },
   { label: "Users", icon: Users, href: "/admin/users" },
-  { label: "Sender IDs", icon: Hash, href: "/admin/sender-ids" },
+  { label: "Tickets", icon: TicketCheck, href: "/admin/tickets" },
   { label: "Payments", icon: CreditCard, href: "/admin/payments" },
-  { label: "Logs", icon: FileText, href: "/admin/logs" },
+  { label: "More", icon: Menu, href: "" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
