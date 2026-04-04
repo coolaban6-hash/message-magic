@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 199 89% 48%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96%;
@@ -38,18 +38,18 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 199 89% 48%;
+    --ring: 221 83% 53%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 17%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 199 89% 48%;
+    --sidebar-ring: 221 83% 53%;
   }
 
   .dark {
@@ -62,7 +62,7 @@
     --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 199 89% 48%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 217 33% 17%;
@@ -85,16 +85,16 @@
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 199 89% 48%;
+    --ring: 221 83% 53%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 14%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 14%;
-    --sidebar-ring: 199 89% 48%;
+    --sidebar-ring: 221 83% 53%;
   }
 }
 
@@ -121,10 +121,10 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(199 89% 48%), hsl(262 83% 58%));
+    background: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 83% 40%));
   }
   .gradient-text {
-    background: linear-gradient(135deg, hsl(199 89% 48%), hsl(262 83% 58%));
+    background: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 83% 40%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
