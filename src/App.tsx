@@ -26,6 +26,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSenderIDs from "./pages/admin/AdminSenderIDs";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminLogs from "./pages/admin/AdminLogs";
+import AdminTickets from "./pages/admin/AdminTickets";
 
 const queryClient = new QueryClient();
 
