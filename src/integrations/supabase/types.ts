@@ -230,6 +230,45 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          admin_reply: string | null
+          created_at: string
+          id: string
+          message: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          replied_by: string | null
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          replied_by?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_reply?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          replied_by?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_logs: {
         Row: {
           action: string
@@ -398,6 +437,8 @@ export type Database = {
       message_status: "queued" | "sent" | "delivered" | "failed" | "refunded"
       payment_status: "pending" | "completed" | "failed"
       sender_id_status: "pending" | "active" | "rejected" | "inactive"
+      ticket_priority: "low" | "normal" | "high" | "urgent"
+      ticket_status: "open" | "in_progress" | "resolved" | "closed"
       transaction_type: "credit" | "debit" | "refund"
     }
     CompositeTypes: {
@@ -530,6 +571,8 @@ export const Constants = {
       message_status: ["queued", "sent", "delivered", "failed", "refunded"],
       payment_status: ["pending", "completed", "failed"],
       sender_id_status: ["pending", "active", "rejected", "inactive"],
+      ticket_priority: ["low", "normal", "high", "urgent"],
+      ticket_status: ["open", "in_progress", "resolved", "closed"],
       transaction_type: ["credit", "debit", "refund"],
     },
   },

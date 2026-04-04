@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, MessageSquare, Wallet, CreditCard, Hash, Code, Users,
-  Shield, FileText, LogOut, Menu, X, Send, BookUser
+  Shield, FileText, LogOut, Menu, X, Send, BookUser, TicketCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ const userNav = [
   { label: "Messages", icon: MessageSquare, href: "/dashboard/messages" },
   { label: "Billing", icon: Wallet, href: "/dashboard/billing" },
   { label: "Sender IDs", icon: Hash, href: "/dashboard/sender-ids" },
+  { label: "Support", icon: TicketCheck, href: "/dashboard/support" },
   { label: "API Keys", icon: Code, href: "/dashboard/api" },
 ];
 
@@ -24,6 +25,7 @@ const adminNav = [
   { label: "Users", icon: Users, href: "/admin/users" },
   { label: "Sender IDs", icon: Hash, href: "/admin/sender-ids" },
   { label: "Payments", icon: CreditCard, href: "/admin/payments" },
+  { label: "Tickets", icon: TicketCheck, href: "/admin/tickets" },
   { label: "Logs", icon: FileText, href: "/admin/logs" },
 ];
 
@@ -38,9 +40,9 @@ const userBottomNav = [
 const adminBottomNav = [
   { label: "Home", icon: Shield, href: "/admin" },
   { label: "Users", icon: Users, href: "/admin/users" },
-  { label: "Sender IDs", icon: Hash, href: "/admin/sender-ids" },
+  { label: "Tickets", icon: TicketCheck, href: "/admin/tickets" },
   { label: "Payments", icon: CreditCard, href: "/admin/payments" },
-  { label: "Logs", icon: FileText, href: "/admin/logs" },
+  { label: "More", icon: Menu, href: "" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -73,33 +75,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40" onClick={() => setMoreMenuOpen(false)} />
           <div className="fixed bottom-16 left-0 right-0 z-50 p-3 animate-fade-in">
             <div className="bg-card border border-border rounded-2xl p-2 shadow-2xl mx-2">
-              <Link
-                to="/dashboard/billing"
-                onClick={() => setMoreMenuOpen(false)}
-                className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
-                  location.pathname === "/dashboard/billing" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"
-                )}
-              >
-                <Wallet className="h-5 w-5" /> Billing
-              </Link>
-              <Link
-                to="/dashboard/sender-ids"
-                onClick={() => setMoreMenuOpen(false)}
-                className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
-                  location.pathname === "/dashboard/sender-ids" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"
-                )}
-              >
-                <Hash className="h-5 w-5" /> Sender IDs
-              </Link>
-              <Link
-                to="/dashboard/api"
-                onClick={() => setMoreMenuOpen(false)}
-                className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
-                  location.pathname === "/dashboard/api" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"
-                )}
-              >
-                <Code className="h-5 w-5" /> API Keys
-              </Link>
+              {isAdminSection ? (
+                <>
+                  <Link to="/admin/sender-ids" onClick={() => setMoreMenuOpen(false)}
+                    className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                      location.pathname === "/admin/sender-ids" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
+                    <Hash className="h-5 w-5" /> Sender IDs
+                  </Link>
+                  <Link to="/admin/logs" onClick={() => setMoreMenuOpen(false)}
+                    className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                      location.pathname === "/admin/logs" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
+                    <FileText className="h-5 w-5" /> Logs
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/dashboard/billing" onClick={() => setMoreMenuOpen(false)}
+                    className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                      location.pathname === "/dashboard/billing" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
+                    <Wallet className="h-5 w-5" /> Billing
+                  </Link>
+                  <Link to="/dashboard/sender-ids" onClick={() => setMoreMenuOpen(false)}
+                    className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                      location.pathname === "/dashboard/sender-ids" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
+                    <Hash className="h-5 w-5" /> Sender IDs
+                  </Link>
+                  <Link to="/dashboard/support" onClick={() => setMoreMenuOpen(false)}
+                    className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                      location.pathname === "/dashboard/support" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
+                    <TicketCheck className="h-5 w-5" /> Support
+                  </Link>
+                  <Link to="/dashboard/api" onClick={() => setMoreMenuOpen(false)}
+                    className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                      location.pathname === "/dashboard/api" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
+                    <Code className="h-5 w-5" /> API Keys
+                  </Link>
+                </>
+              )}
               {isAdmin && (
                 <Link
                   to={isAdminSection ? "/dashboard" : "/admin"}
