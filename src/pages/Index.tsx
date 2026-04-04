@@ -16,10 +16,7 @@ export default function Index() {
           </div>
           <div className="flex items-center gap-3">
             <Link to="/login">
-              <Button variant="ghost">Sign In</Button>
-            </Link>
-            <Link to="/register">
-              <Button className="gradient-primary">Get Started</Button>
+              <Button className="gradient-primary">Login</Button>
             </Link>
           </div>
         </div>
