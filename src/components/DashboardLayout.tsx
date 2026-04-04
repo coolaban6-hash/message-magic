@@ -16,6 +16,7 @@ const userNav = [
   { label: "Messages", icon: MessageSquare, href: "/dashboard/messages" },
   { label: "Billing", icon: Wallet, href: "/dashboard/billing" },
   { label: "Sender IDs", icon: Hash, href: "/dashboard/sender-ids" },
+  { label: "Support", icon: TicketCheck, href: "/dashboard/support" },
   { label: "API Keys", icon: Code, href: "/dashboard/api" },
 ];
 
