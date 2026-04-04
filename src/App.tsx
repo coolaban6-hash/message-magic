@@ -19,6 +19,7 @@ import Billing from "./pages/dashboard/Billing";
 import SenderIDs from "./pages/dashboard/SenderIDs";
 import APIKeys from "./pages/dashboard/APIKeys";
 import Contacts from "./pages/dashboard/Contacts";
+import SupportTickets from "./pages/dashboard/SupportTickets";
 
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminUsers from "./pages/admin/AdminUsers";
