@@ -185,6 +185,7 @@ serve(async (req) => {
 
       return jsonResponse({ status: payment.status });
     }
+    const { amount, phone_number, purpose, sender_id, network, business_name } = body;
     const amountValue = Number(amount);
     const normalizedPhone = normalizeKenyanPhone(phone_number);
 
@@ -196,7 +197,7 @@ serve(async (req) => {
       return jsonResponse({ error: "Enter a valid Kenyan phone number" }, 400);
     }
 
-    const apiRef = `${purpose}_${user.id}_${Date.now()}`;
+    const apiRef = `${purpose || "credits"}_${user.id}_${Date.now()}`;
     const { data: payment, error: paymentError } = await supabase
       .from("payments")
       .insert({
