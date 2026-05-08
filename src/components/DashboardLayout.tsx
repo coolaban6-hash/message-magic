@@ -18,6 +18,7 @@ const userNav = [
   { label: "Sender IDs", icon: Hash, href: "/dashboard/sender-ids" },
   { label: "Support", icon: TicketCheck, href: "/dashboard/support" },
   { label: "API Keys", icon: Code, href: "/dashboard/api" },
+  { label: "Settings", icon: SettingsIcon, href: "/dashboard/settings" },
 ];
 
 const adminNav = [
