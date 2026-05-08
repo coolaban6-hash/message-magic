@@ -10,6 +10,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 import Overview from "./pages/dashboard/Overview";
@@ -20,6 +22,7 @@ import SenderIDs from "./pages/dashboard/SenderIDs";
 import APIKeys from "./pages/dashboard/APIKeys";
 import Contacts from "./pages/dashboard/Contacts";
 import SupportTickets from "./pages/dashboard/SupportTickets";
+import Settings from "./pages/dashboard/Settings";
 
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -42,9 +45,12 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* User Dashboard */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Overview /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/sms" element={<ProtectedRoute><DashboardLayout><SendSMS /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/messages" element={<ProtectedRoute><DashboardLayout><Messages /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/billing" element={<ProtectedRoute><DashboardLayout><Billing /></DashboardLayout></ProtectedRoute>} />

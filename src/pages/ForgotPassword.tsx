@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,35 +8,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { MessageSquare, Loader2 } from "lucide-react";
 
-const PRODUCTION_APP_URL = "https://bulksms.abancool.com";
-
-export default function Login() {
+export default function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const isPreviewHost = window.location.hostname.includes("lovable.app") || window.location.hostname.includes("lovableproject.com");
-    const hasAuthPayload = window.location.search.includes("token_hash=")
-      || window.location.search.includes("type=")
-      || window.location.hash.includes("access_token=")
-      || window.location.hash.includes("refresh_token=");
-
-    if (isPreviewHost && hasAuthPayload) {
-      window.location.replace(`${PRODUCTION_APP_URL}/login${window.location.search}${window.location.hash}`);
-    }
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { toast.error("Please fill in all fields"); return; }
+    if (!email) { toast.error("Enter your email"); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Welcome back!");
-    navigate("/dashboard");
+    toast.success("Check your email for the 6-digit code");
+    navigate(`/reset-password?email=${encodeURIComponent(email)}`);
   };
 
   return (
@@ -49,34 +36,27 @@ export default function Login() {
             </div>
             <h1 className="text-2xl font-display font-bold">ABANCOOL SMS</h1>
           </div>
-          <p className="text-muted-foreground">Bulk SMS Platform</p>
+          <p className="text-muted-foreground">Reset your password</p>
         </div>
         <Card className="glass">
           <CardHeader>
-            <CardTitle className="font-display">Sign In</CardTitle>
-            <CardDescription>Enter your credentials to access your dashboard</CardDescription>
+            <CardTitle className="font-display">Forgot Password</CardTitle>
+            <CardDescription>We'll email you a one-time code to reset your password</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
-                </div>
-                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
               <Button type="submit" className="w-full gradient-primary" disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Sign In
+                Send Reset Code
               </Button>
             </form>
             <p className="text-center text-sm text-muted-foreground mt-4">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:underline">Sign Up</Link>
+              Remember your password?{" "}
+              <Link to="/login" className="text-primary hover:underline">Sign In</Link>
             </p>
           </CardContent>
         </Card>

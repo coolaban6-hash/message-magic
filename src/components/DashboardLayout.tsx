@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, MessageSquare, Wallet, CreditCard, Hash, Code, Users,
-  Shield, FileText, LogOut, Menu, X, Send, BookUser, TicketCheck
+  Shield, FileText, LogOut, Menu, X, Send, BookUser, TicketCheck, Settings as SettingsIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ const userNav = [
   { label: "Sender IDs", icon: Hash, href: "/dashboard/sender-ids" },
   { label: "Support", icon: TicketCheck, href: "/dashboard/support" },
   { label: "API Keys", icon: Code, href: "/dashboard/api" },
+  { label: "Settings", icon: SettingsIcon, href: "/dashboard/settings" },
 ];
 
 const adminNav = [
@@ -109,6 +110,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
                       location.pathname === "/dashboard/api" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
                     <Code className="h-5 w-5" /> API Keys
+                  </Link>
+                  <Link to="/dashboard/settings" onClick={() => setMoreMenuOpen(false)}
+                    className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                      location.pathname === "/dashboard/settings" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
+                    <SettingsIcon className="h-5 w-5" /> Settings
                   </Link>
                 </>
               )}
