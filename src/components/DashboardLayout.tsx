@@ -111,6 +111,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       location.pathname === "/dashboard/api" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
                     <Code className="h-5 w-5" /> API Keys
                   </Link>
+                  <Link to="/dashboard/settings" onClick={() => setMoreMenuOpen(false)}
+                    className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                      location.pathname === "/dashboard/settings" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted")}>
+                    <SettingsIcon className="h-5 w-5" /> Settings
+                  </Link>
                 </>
               )}
               {isAdmin && (
